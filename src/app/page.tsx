@@ -122,8 +122,8 @@ export default function Home() {
   });
   const barChartData = Object.keys(courseCountMap).map(courseId => {
     const course = MOCK_COURSES.find(c => c.id === courseId);
-    return { name: td(course ? course.title : courseId), [t('dashboard.totalTrain')]: courseCountMap[courseId] };
-  }).sort((a, b) => b[t('dashboard.totalTrain')] - a[t('dashboard.totalTrain')]);
+    return { name: td(course ? course.title : courseId), count: courseCountMap[courseId] };
+  }).sort((a, b) => b.count - a.count);
 
   // Pie Chart: Hours by Dept
   const deptColors: Record<string, string> = {
@@ -152,24 +152,24 @@ export default function Home() {
     for (let i = 5; i >= 0; i--) {
       const tempDate = new Date(d);
       tempDate.setMonth(tempDate.getMonth() - i);
-      result.push({ 
+      result.push({
         monthYear: tempDate.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', year: '2-digit' }),
         month: tempDate.getMonth(),
         year: tempDate.getFullYear(),
-        [t('dashboard.totalTrain')]: 0,
-        [t('common.pass')]: 0
+        total: 0,
+        pass: 0
       });
     }
     deptFilteredRecords.forEach(r => {
       const rd = new Date(r.date);
       const dataPt = result.find(ld => ld.month === rd.getMonth() && ld.year === rd.getFullYear());
       if (dataPt) {
-        dataPt[t('dashboard.totalTrain')] += 1;
-        if (r.score >= 70) dataPt[t('common.pass')] += 1;
+        dataPt.total += 1;
+        if (r.score >= 70) dataPt.pass += 1;
       }
     });
     return result;
-  }, [deptFilteredRecords, t, lang]);
+  }, [deptFilteredRecords, lang]);
 
   // Heatmap: 365 Days Activity
   const heatmapDays = useMemo(() => {
@@ -423,7 +423,7 @@ export default function Home() {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                       <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                       <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                      <Bar dataKey={t('dashboard.totalTrain')} fill="#10b981" radius={[6, 6, 0, 0]} barSize={40}>
+                      <Bar dataKey="count" name={t('dashboard.totalTrain')} fill="#10b981" radius={[6, 6, 0, 0]} barSize={40}>
                         {barChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#34d399'} />)}
                       </Bar>
                     </BarChart>
@@ -535,8 +535,8 @@ export default function Home() {
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                   <RechartsTooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                   <Legend verticalAlign="top" height={36} iconType="circle" />
-                  <Line type="monotone" dataKey={t('dashboard.totalTrain')} stroke="#3b82f6" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
-                  <Line type="monotone" dataKey={t('common.pass')} stroke="#10b981" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                  <Line type="monotone" dataKey="total" name={t('dashboard.totalTrain')} stroke="#3b82f6" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                  <Line type="monotone" dataKey="pass" name={t('common.pass')} stroke="#10b981" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
