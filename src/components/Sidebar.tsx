@@ -35,7 +35,7 @@ export default function Sidebar() {
       {/* Mobile Hamburger Button */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="md:hidden fixed top-5 left-5 z-40 p-2.5 bg-white rounded-xl shadow-md border border-slate-100 text-slate-600 hover:text-emerald-500 transition-colors"
+        className="md:hidden fixed top-5 left-5 z-40 p-2.5 bg-white rounded-xl shadow-md border border-slate-100 text-slate-600 hover:text-blue-500 transition-colors"
         aria-label="Open Menu"
       >
         <Menu size={24} />
@@ -56,9 +56,12 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex justify-between items-center mb-8 px-4 mt-2 md:mt-4">
-          <div>
-            <h1 className="text-2xl font-bold text-sidebar-active">{t('sidebar.title')}</h1>
-            <p className="text-sidebar-text/70 text-sm mt-1">{t('sidebar.subtitle')}</p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="VRC Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
+            <div>
+              <h1 className="text-2xl font-bold text-sidebar-active">{t('sidebar.title')}</h1>
+              <p className="text-sidebar-text/70 text-sm mt-1">{t('sidebar.subtitle')}</p>
+            </div>
           </div>
           {/* Close Button on Mobile inside Sidebar */}
           <button 
@@ -88,53 +91,6 @@ export default function Sidebar() {
         </nav>
         
         <div className="mt-auto space-y-3">
-          {/* Theme & Language Toggle in one row */}
-          <div className="bg-sidebar-hover/50 p-1 rounded-xl flex items-center justify-between">
-            {/* Theme Toggle (Left) */}
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setTheme('light')}
-                className={`p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-sidebar-active text-white shadow-md' : 'text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover'}`}
-                title={t('theme.light')}
-              >
-                <Sun size={16} />
-              </button>
-              <button 
-                onClick={() => setTheme('dark')}
-                className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'bg-sidebar-active text-white shadow-md' : 'text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover'}`}
-                title={t('theme.dark')}
-              >
-                <Moon size={16} />
-              </button>
-              <button 
-                onClick={() => setTheme('system')}
-                className={`p-1.5 rounded-lg transition-all ${theme === 'system' ? 'bg-sidebar-active text-white shadow-md' : 'text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover'}`}
-                title={t('theme.system')}
-              >
-                <Monitor size={16} />
-              </button>
-            </div>
-
-            {/* Divider */}
-            <div className="w-[1px] h-6 bg-border-color/20 mx-1"></div>
-
-            {/* Language Toggle (Right) */}
-            <div className="flex items-center flex-1">
-              <button 
-                onClick={() => setLang('th')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${lang === 'th' ? 'bg-sidebar-active text-white shadow-md' : 'text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover'}`}
-              >
-                TH
-              </button>
-              <button 
-                onClick={() => setLang('en')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${lang === 'en' ? 'bg-sidebar-active text-white shadow-md' : 'text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover'}`}
-              >
-                EN
-              </button>
-            </div>
-          </div>
-
           <div className="bg-sidebar-hover p-3 rounded-xl border border-border-color/10">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-sidebar-active flex items-center justify-center text-white font-bold text-sm shrink-0">

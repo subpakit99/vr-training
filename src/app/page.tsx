@@ -1,59 +1,15 @@
 "use client";
 import { useState, useMemo } from "react";
-import { UserCircle, CheckCircle, XCircle, Clock, BookOpen, Calendar, AlertTriangle, XOctagon, Info, TrendingUp, Users, Award, ShieldCheck, Filter, CalendarHeart } from "lucide-react";
+import { UserCircle, CheckCircle, Clock, BookOpen, Calendar, AlertTriangle, XOctagon, Info, TrendingUp, Users, Award, ShieldCheck, Filter, CalendarHeart, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, Legend, LineChart, Line } from "recharts";
 import { useTranslation } from '@/lib/LanguageContext';
-
-// Types
-interface Course { id: string; title: string; expiry_years: number; hours: number; category: string; is_compulsory: boolean; }
-interface Employee { id: string; fullName: string; department: string; position: string; }
-interface TrainingRecord { id: string; empId: string; courseId: string; date: string; trainer: string; score: number; }
-
-// Mock Data
-const MOCK_COURSES: Course[] = [
-  { id: 'SFT-001', title: 'ความปลอดภัยเครื่องจักร', expiry_years: 1, hours: 6, category: 'ความปลอดภัย', is_compulsory: true },
-  { id: 'ORI-001', title: 'ปฐมนิเทศพนักงานใหม่', expiry_years: 0, hours: 3, category: 'ปฐมนิเทศ', is_compulsory: true },
-  { id: 'SKL-001', title: 'การแปรรูปไม้ยางพารา', expiry_years: 2, hours: 12, category: 'ทักษะงาน', is_compulsory: false },
-  { id: 'SKL-002', title: 'การขับโฟล์คลิฟต์', expiry_years: 2, hours: 8, category: 'ทักษะงาน', is_compulsory: false },
-];
-
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'EMP-101', fullName: 'สมชาย ใจดี', department: 'เตรียมไม้', position: 'พนักงานผลิต' },
-  { id: 'EMP-102', fullName: 'วิชัย รักงาน', department: 'แปรรูปไม้สด', position: 'หัวหน้ากะ' },
-  { id: 'EMP-103', fullName: 'ดวงใจ ขยันยิ่ง', department: 'สำนักงาน', position: 'เจ้าหน้าที่บุคคล' },
-  { id: 'EMP-104', fullName: 'สมศักดิ์ กล้าหาญ', department: 'คลังสินค้า', position: 'พนักงานขับโฟล์คลิฟต์' },
-  { id: 'EMP-105', fullName: 'มานี สีใส', department: 'แปรรูปไม้สด', position: 'พนักงานผลิต' }, 
-];
-
-const MOCK_RECORDS: TrainingRecord[] = [
-  { id: 'TR-1001', empId: 'EMP-101', courseId: 'SFT-001', date: '2026-05-20', trainer: 'คุณวนัสรา', score: 85 },
-  { id: 'TR-1002', empId: 'EMP-101', courseId: 'SKL-001', date: '2026-05-22', trainer: 'คุณสมภพ', score: 65 }, // Fail
-  { id: 'TR-1003', empId: 'EMP-104', courseId: 'ORI-001', date: '2026-05-24', trainer: 'HR', score: 100 },
-  { id: 'TR-1004', empId: 'EMP-101', courseId: 'ORI-001', date: '2026-01-10', trainer: 'HR', score: 80 }, 
-  { id: 'TR-1005', empId: 'EMP-102', courseId: 'SFT-001', date: '2025-05-01', trainer: 'วิทยากร', score: 95 }, // Expired
-  { id: 'TR-1006', empId: 'EMP-103', courseId: 'SFT-001', date: '2025-06-15', trainer: 'วิทยากร', score: 90 }, // Expiring soon (<30 days from 2026-05-24)
-  { id: 'TR-1007', empId: 'EMP-102', courseId: 'ORI-001', date: '2026-05-01', trainer: 'HR', score: 88 },
-  { id: 'TR-1008', empId: 'EMP-103', courseId: 'ORI-001', date: '2026-05-01', trainer: 'HR', score: 88 },
-  { id: 'TR-1009', empId: 'EMP-104', courseId: 'SFT-001', date: '2026-05-01', trainer: 'วิทยากร', score: 88 },
-  { id: 'TR-1010', empId: 'EMP-104', courseId: 'SKL-002', date: '2026-05-05', trainer: 'คุณสมภพ', score: 92 },
-  
-  // Extra data for 6-months trends
-  { id: 'TR-1011', empId: 'EMP-102', courseId: 'SKL-001', date: '2025-12-15', trainer: 'คุณสมภพ', score: 75 },
-  { id: 'TR-1012', empId: 'EMP-103', courseId: 'SKL-002', date: '2025-12-20', trainer: 'วิทยากร', score: 60 }, // Fail
-  { id: 'TR-1013', empId: 'EMP-101', courseId: 'SKL-002', date: '2026-01-25', trainer: 'คุณสมภพ', score: 85 },
-  { id: 'TR-1014', empId: 'EMP-102', courseId: 'ORI-001', date: '2026-02-14', trainer: 'HR', score: 90 },
-  { id: 'TR-1015', empId: 'EMP-103', courseId: 'SFT-001', date: '2026-03-05', trainer: 'วิทยากร', score: 72 },
-  { id: 'TR-1016', empId: 'EMP-104', courseId: 'SFT-001', date: '2026-03-10', trainer: 'วิทยากร', score: 88 },
-  { id: 'TR-1017', empId: 'EMP-101', courseId: 'SKL-001', date: '2026-03-20', trainer: 'คุณสมภพ', score: 95 },
-  { id: 'TR-1018', empId: 'EMP-102', courseId: 'SKL-002', date: '2026-03-25', trainer: 'คุณสมภพ', score: 65 }, // Fail
-  { id: 'TR-1019', empId: 'EMP-103', courseId: 'SKL-001', date: '2026-04-10', trainer: 'คุณสมภพ', score: 82 },
-  { id: 'TR-1020', empId: 'EMP-104', courseId: 'SKL-002', date: '2026-04-15', trainer: 'คุณสมภพ', score: 78 },
-];
+import { useData, type Course } from '@/lib/useData';
 
 export default function Home() {
   const { t, lang, td } = useTranslation();
+  const { courses: MOCK_COURSES, employees: MOCK_EMPLOYEES, records: MOCK_RECORDS, loading, error, refetch } = useData();
   const [activeTab, setActiveTab] = useState<'overview' | 'individual'>('overview');
-  const [selectedEmpId, setSelectedEmpId] = useState<string>('EMP-101'); 
+  const [selectedEmpId, setSelectedEmpId] = useState<string>('EMP-101');
   
   // Dashboard Filters
   const [timeFilter, setTimeFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
@@ -129,7 +85,7 @@ export default function Home() {
   const deptColors: Record<string, string> = {
     'เตรียมไม้': '#3b82f6', // blue
     'แปรรูปไม้สด': '#f97316', // orange
-    'คลังสินค้า': '#10b981', // emerald
+    'คลังสินค้า': '#10b981', // blue
     'สำนักงาน': '#a855f7' // purple
   };
   const pieDataMap: Record<string, number> = {};
@@ -213,10 +169,10 @@ export default function Home() {
   const getHeatmapColor = (count: number, isFuture: boolean) => {
     if (isFuture) return "bg-transparent";
     if (count === 0) return "bg-bg-primary border border-border-color";
-    if (count === 1) return "bg-emerald-200";
-    if (count === 2) return "bg-emerald-400";
-    if (count >= 3 && count <= 4) return "bg-emerald-600";
-    return "bg-emerald-800";
+    if (count === 1) return "bg-blue-200";
+    if (count === 2) return "bg-blue-400";
+    if (count >= 3 && count <= 4) return "bg-blue-600";
+    return "bg-blue-800";
   };
 
   // --- Alerts ---
@@ -277,6 +233,25 @@ export default function Home() {
     return t('dashboard.timeAll');
   };
 
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64 text-slate-400 gap-2">
+        <Loader2 className="animate-spin" size={20} /> กำลังโหลด Dashboard...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 max-w-3xl mx-auto">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl">
+          เกิดข้อผิดพลาด: {error}
+          <button onClick={refetch} className="ml-3 underline">ลองใหม่</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
       
@@ -288,13 +263,13 @@ export default function Home() {
         </div>
         <div className="bg-bg-primary border border-border-color p-1.5 rounded-xl inline-flex w-fit shadow-inner">
           <button 
-            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${activeTab === 'overview' ? 'bg-bg-card text-emerald-600 shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${activeTab === 'overview' ? 'bg-bg-card text-blue-600 shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
             onClick={() => setActiveTab('overview')}
           >
             {t('dashboard.tabOverview')}
           </button>
           <button 
-            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${activeTab === 'individual' ? 'bg-bg-card text-emerald-600 shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${activeTab === 'individual' ? 'bg-bg-card text-blue-600 shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
             onClick={() => setActiveTab('individual')}
           >
             {t('dashboard.tabIndividual')}
@@ -311,7 +286,7 @@ export default function Home() {
               <Filter size={18} /> {t('dashboard.filterTitle')}
             </div>
             <select 
-              className="w-full sm:w-auto px-4 py-2 border border-border-color rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-bg-primary font-medium text-text-primary"
+              className="w-full sm:w-auto px-4 py-2 border border-border-color rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-bg-primary font-medium text-text-primary"
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as any)}
             >
@@ -321,7 +296,7 @@ export default function Home() {
               <option value="all">{t('dashboard.timeAll')}</option>
             </select>
             <select 
-              className="w-full sm:w-auto px-4 py-2 border border-border-color rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-bg-primary font-medium text-text-primary"
+              className="w-full sm:w-auto px-4 py-2 border border-border-color rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-bg-primary font-medium text-text-primary"
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
             >
@@ -368,8 +343,8 @@ export default function Home() {
           {/* Metrics Row (4 Cards) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-bg-card rounded-2xl p-6 border border-border-color/50 shadow-sm relative overflow-hidden group">
-              <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform"></div>
-              <Users className="text-emerald-500 relative z-10 mb-4" size={28} />
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-110 transition-transform"></div>
+              <Users className="text-blue-500 relative z-10 mb-4" size={28} />
               <p className="text-text-secondary font-medium mb-1 relative z-10">{t('dashboard.trainedEmp')} ({getTimeFilterLabel()})</p>
               <div className="flex items-end gap-2 relative z-10">
                 <h2 className="text-4xl font-black text-text-primary">{uniqueEmpsTrained}</h2>
@@ -412,7 +387,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-bg-card rounded-2xl p-6 border border-border-color/50 shadow-sm">
               <h3 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2">
-                <TrendingUp size={20} className="text-emerald-500" />
+                <TrendingUp size={20} className="text-blue-500" />
                 {t('dashboard.popularCourses')}
               </h3>
               <div className="h-[250px] w-full">
@@ -460,7 +435,7 @@ export default function Home() {
           {/* Heatmap Section */}
           <div className="bg-bg-card rounded-2xl p-6 border border-border-color/50 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2">
-              <CalendarHeart size={20} className="text-emerald-500" />
+              <CalendarHeart size={20} className="text-blue-500" />
               {t('dashboard.heatmapTitle')}
             </h3>
             
@@ -498,7 +473,7 @@ export default function Home() {
                           <div 
                             key={`d-${dIdx}`} 
                             title={`${formatDateThai(day.dateStr)} · ${day.count === 0 ? t('dashboard.heatmapNoData') : t('dashboard.heatmapData', day.count)}`}
-                            className={`w-[12px] h-[12px] rounded-sm ${getHeatmapColor(day.count, day.isFuture)} transition-colors hover:ring-1 hover:ring-emerald-500`}
+                            className={`w-[12px] h-[12px] rounded-sm ${getHeatmapColor(day.count, day.isFuture)} transition-colors hover:ring-1 hover:ring-blue-500`}
                           />
                         ))}
                       </div>
@@ -512,10 +487,10 @@ export default function Home() {
               <span>{t('dashboard.heatmapLess')}</span>
               <div className="flex gap-[3px]">
                 <div className="w-[12px] h-[12px] rounded-sm bg-bg-primary border border-border-color"></div>
-                <div className="w-[12px] h-[12px] rounded-sm bg-emerald-200"></div>
-                <div className="w-[12px] h-[12px] rounded-sm bg-emerald-400"></div>
-                <div className="w-[12px] h-[12px] rounded-sm bg-emerald-600"></div>
-                <div className="w-[12px] h-[12px] rounded-sm bg-emerald-800"></div>
+                <div className="w-[12px] h-[12px] rounded-sm bg-blue-200"></div>
+                <div className="w-[12px] h-[12px] rounded-sm bg-blue-400"></div>
+                <div className="w-[12px] h-[12px] rounded-sm bg-blue-600"></div>
+                <div className="w-[12px] h-[12px] rounded-sm bg-blue-800"></div>
               </div>
               <span>{t('dashboard.heatmapMore')}</span>
             </div>
@@ -555,7 +530,7 @@ export default function Home() {
             <div className="flex-1">
               <label className="block text-sm font-medium text-text-secondary mb-2">{t('emp.searchSelect')}</label>
               <select 
-                className="w-full max-w-md px-4 py-3 border border-border-color rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-bg-primary font-medium text-text-primary text-lg"
+                className="w-full max-w-md px-4 py-3 border border-border-color rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-bg-primary font-medium text-text-primary text-lg"
                 value={selectedEmpId}
                 onChange={(e) => setSelectedEmpId(e.target.value)}
               >
@@ -571,19 +546,19 @@ export default function Home() {
           {selectedEmp && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="col-span-1 space-y-6">
-                <div className="bg-emerald-600 rounded-3xl p-6 text-white shadow-lg shadow-emerald-600/20 relative overflow-hidden">
+                <div className="bg-blue-600 rounded-3xl p-6 text-white shadow-lg shadow-blue-600/20 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-bg-card/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-                  <h2 className="text-sm font-medium text-emerald-100 mb-1">{t('emp.info')}</h2>
+                  <h2 className="text-sm font-medium text-blue-100 mb-1">{t('emp.info')}</h2>
                   <p className="text-2xl font-bold mb-4">{td(selectedEmp.fullName)}</p>
                   <div className="space-y-3">
-                    <div className="flex justify-between border-b border-emerald-500/30 pb-2">
-                      <span className="text-emerald-100">{t('emp.id')}</span><span className="font-bold">{selectedEmp.id}</span>
+                    <div className="flex justify-between border-b border-blue-500/30 pb-2">
+                      <span className="text-blue-100">{t('emp.id')}</span><span className="font-bold">{selectedEmp.id}</span>
                     </div>
-                    <div className="flex justify-between border-b border-emerald-500/30 pb-2">
-                      <span className="text-emerald-100">{t('emp.dept')}</span><span className="font-bold">{td(selectedEmp.department)}</span>
+                    <div className="flex justify-between border-b border-blue-500/30 pb-2">
+                      <span className="text-blue-100">{t('emp.dept')}</span><span className="font-bold">{td(selectedEmp.department)}</span>
                     </div>
                     <div className="flex justify-between pb-2">
-                      <span className="text-emerald-100">{t('emp.position')}</span><span className="font-bold">{td(selectedEmp.position)}</span>
+                      <span className="text-blue-100">{t('emp.position')}</span><span className="font-bold">{td(selectedEmp.position)}</span>
                     </div>
                   </div>
                 </div>
@@ -606,7 +581,7 @@ export default function Home() {
               <div className="col-span-1 lg:col-span-2">
                 <div className="bg-bg-card rounded-3xl border border-border-color/50 shadow-sm p-6">
                   <h3 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
-                    <BookOpen size={20} className="text-emerald-500" /> {t('emp.trainingHistory')}
+                    <BookOpen size={20} className="text-blue-500" /> {t('emp.trainingHistory')}
                     <span className="ml-auto text-sm font-medium bg-bg-primary border border-border-color text-text-secondary px-3 py-1 rounded-full">{t('emp.total')} {empRecords.length} {t('dashboard.items')}</span>
                   </h3>
                   {sortedEmpRecords.length > 0 ? (
@@ -617,14 +592,14 @@ export default function Home() {
                         const expiryText = calculateExpiryDate(record.date, course);
                         
                         return (
-                          <div key={record.id} className="border border-border-color/50 rounded-2xl p-5 hover:border-emerald-500/30 hover:shadow-md transition-all group">
+                          <div key={record.id} className="border border-border-color/50 rounded-2xl p-5 hover:border-blue-500/30 hover:shadow-md transition-all group">
                             <div className="flex justify-between items-start mb-3">
                               <div>
                                 <span className="inline-block px-2 py-1 bg-bg-primary border border-border-color text-text-secondary text-xs font-bold rounded mb-2">{td(course?.category || '')}</span>
-                                <h4 className="text-lg font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{td(course?.title || '')}</h4>
+                                <h4 className="text-lg font-bold text-text-primary group-hover:text-blue-600 transition-colors">{td(course?.title || '')}</h4>
                               </div>
                               {isPass ? (
-                                <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg flex flex-col items-center">
+                                <div className="bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-lg flex flex-col items-center">
                                   <span className="text-xs font-medium mb-0.5">{t('common.pass')}</span><span className="text-lg font-bold">{record.score}</span>
                                 </div>
                               ) : (
@@ -636,10 +611,10 @@ export default function Home() {
                             <div className="flex flex-wrap gap-y-2 gap-x-6 text-sm text-text-secondary">
                               <div className="flex items-center gap-1.5"><Calendar size={14} /> {t('emp.trainDate')} <span className="text-text-primary font-medium">{formatDateThai(record.date)}</span></div>
                               {isPass && course && course.hours > 0 && (
-                                 <div className="flex items-center gap-1.5"><Clock size={14} /> {t('emp.hoursEarned')} <span className="text-emerald-600 font-bold">+{course.hours} {t('dashboard.hoursPerPerson').split('/')[0]}</span></div>
+                                 <div className="flex items-center gap-1.5"><Clock size={14} /> {t('emp.hoursEarned')} <span className="text-blue-600 font-bold">+{course.hours} {t('dashboard.hoursPerPerson').split('/')[0]}</span></div>
                               )}
                               {isPass && (
-                                <div className="flex items-center gap-1.5"><CheckCircle size={14} className="text-emerald-500" /> {t('emp.expireDate')} <span className="text-text-primary font-medium">{expiryText}</span></div>
+                                <div className="flex items-center gap-1.5"><CheckCircle size={14} className="text-blue-500" /> {t('emp.expireDate')} <span className="text-text-primary font-medium">{expiryText}</span></div>
                               )}
                             </div>
                           </div>

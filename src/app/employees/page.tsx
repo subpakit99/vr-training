@@ -1,31 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, Users, HardHat, Building2, PackageSearch } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Users, HardHat, Building2, PackageSearch, Loader2 } from "lucide-react";
 import { useTranslation } from '@/lib/LanguageContext';
-
-type Department = 'เตรียมไม้' | 'แปรรูปไม้สด' | 'คลังสินค้า' | 'สำนักงาน';
-
-interface Employee {
-  id: string;
-  fullName: string;
-  department: Department;
-  position: string;
-}
-
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'EMP-101', fullName: 'สมชาย ใจดี', department: 'เตรียมไม้', position: 'พนักงานผลิต' },
-  { id: 'EMP-102', fullName: 'วิชัย รักงาน', department: 'แปรรูปไม้สด', position: 'หัวหน้ากะ' },
-  { id: 'EMP-103', fullName: 'ดวงใจ ขยันยิ่ง', department: 'สำนักงาน', position: 'เจ้าหน้าที่บุคคล' },
-  { id: 'EMP-104', fullName: 'สมศักดิ์ กล้าหาญ', department: 'คลังสินค้า', position: 'พนักงานขับโฟล์คลิฟต์' },
-];
+import { useData, saveEmployee, deleteEmployee, type Employee, type Department } from '@/lib/useData';
 
 export default function EmployeesPage() {
   const { t, td } = useTranslation();
-  const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
+  const { employees, loading, error, refetch } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
-  
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState<Partial<Employee>>({
     id: '', fullName: '', department: 'เตรียมไม้', position: ''
   });
@@ -50,24 +36,36 @@ export default function EmployeesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm(t('training.confirmDel'))) {
-      setEmployees(employees.filter(e => e.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm(t('training.confirmDel'))) return;
+    const { error: delErr } = await deleteEmployee(id);
+    if (delErr) {
+      alert(`ลบไม่สำเร็จ: ${delErr.message}`);
+      return;
     }
+    await refetch();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.id || !formData.fullName || !formData.position) {
       alert(t('training.scoreMissing'));
       return;
     }
-
-    if (editingEmp) {
-      setEmployees(employees.map(e => e.id === editingEmp.id ? { ...formData } as Employee : e));
-    } else {
-      setEmployees([...employees, { ...formData } as Employee]);
+    setSaving(true);
+    const emp: Employee = {
+      id: formData.id!,
+      fullName: formData.fullName!,
+      department: (formData.department || 'เตรียมไม้') as Department,
+      position: formData.position!,
+    };
+    const { error: saveErr } = await saveEmployee(emp, !!editingEmp);
+    setSaving(false);
+    if (saveErr) {
+      alert(`บันทึกไม่สำเร็จ: ${saveErr.message}`);
+      return;
     }
     setIsModalOpen(false);
+    await refetch();
   };
 
   const uniqueDepts = new Set(employees.map(e => e.department)).size;
@@ -76,7 +74,7 @@ export default function EmployeesPage() {
     switch(dept) {
       case 'เตรียมไม้': return <HardHat size={16} className="text-amber-600" />;
       case 'แปรรูปไม้สด': return <PackageSearch size={16} className="text-blue-600" />;
-      case 'คลังสินค้า': return <Building2 size={16} className="text-emerald-600" />;
+      case 'คลังสินค้า': return <Building2 size={16} className="text-blue-600" />;
       default: return <Users size={16} className="text-purple-600" />;
     }
   };
@@ -85,10 +83,29 @@ export default function EmployeesPage() {
     switch(dept) {
       case 'เตรียมไม้': return "bg-amber-50 text-amber-700 border-amber-200";
       case 'แปรรูปไม้สด': return "bg-blue-50 text-blue-700 border-blue-200";
-      case 'คลังสินค้า': return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case 'คลังสินค้า': return "bg-blue-50 text-blue-700 border-blue-200";
       default: return "bg-purple-50 text-purple-700 border-purple-200";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64 text-slate-400 gap-2">
+        <Loader2 className="animate-spin" size={20} /> กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl">
+          เกิดข้อผิดพลาด: {error}
+          <button onClick={refetch} className="ml-3 underline">ลองใหม่</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 animate-in fade-in duration-500">
@@ -99,7 +116,7 @@ export default function EmployeesPage() {
         </div>
         <button 
           onClick={openAddModal}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/30"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-500/30"
         >
           <Plus size={20} />
           {t('employees.addBtn')}
@@ -117,7 +134,7 @@ export default function EmployeesPage() {
           </div>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
             <Building2 size={24} />
           </div>
           <div>
@@ -134,7 +151,7 @@ export default function EmployeesPage() {
             <input 
               type="text" 
               placeholder={t('employees.searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -222,7 +239,7 @@ export default function EmployeesPage() {
                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('employees.formId')}</label>
                  <input 
                    type="text" 
-                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                    value={formData.id}
                    onChange={e => setFormData({...formData, id: e.target.value})}
                    disabled={!!editingEmp}
@@ -232,7 +249,7 @@ export default function EmployeesPage() {
                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('employees.formName')}</label>
                  <input 
                    type="text" 
-                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                    value={formData.fullName}
                    onChange={e => setFormData({...formData, fullName: e.target.value})}
                  />
@@ -241,7 +258,7 @@ export default function EmployeesPage() {
                  <div>
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('employees.formDept')}</label>
                    <select 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-white"
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white"
                      value={formData.department}
                      onChange={e => setFormData({...formData, department: e.target.value as Department})}
                    >
@@ -255,7 +272,7 @@ export default function EmployeesPage() {
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('employees.formPosition')}</label>
                    <input 
                      type="text" 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                      value={formData.position}
                      onChange={e => setFormData({...formData, position: e.target.value})}
                    />
@@ -269,10 +286,12 @@ export default function EmployeesPage() {
               >
                 {t('common.cancel')}
               </button>
-              <button 
+              <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors shadow-md shadow-emerald-500/20"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-md shadow-blue-500/20 flex items-center gap-2"
               >
+                {saving && <Loader2 size={16} className="animate-spin" />}
                 {t('common.save')}
               </button>
             </div>

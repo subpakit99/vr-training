@@ -1,45 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, Calendar, FileText, UserCircle, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useTranslation } from '@/lib/LanguageContext';
-
-interface Course { id: string; title: string; expiry_years: number; }
-interface Employee { id: string; fullName: string; department: string; }
-interface TrainingRecord {
-  id: string; // Internal record ID
-  empId: string;
-  courseId: string;
-  date: string; // YYYY-MM-DD
-  trainer: string;
-  score: number;
-}
-
-// Mock Data for Lookups
-const MOCK_COURSES: Course[] = [
-  { id: 'SFT-001', title: 'ความปลอดภัยในการทำงานกับเครื่องจักร', expiry_years: 1 },
-  { id: 'ORI-001', title: 'ปฐมนิเทศพนักงานใหม่', expiry_years: 0 },
-  { id: 'SKL-001', title: 'เทคนิคการแปรรูปไม้ยางพารา', expiry_years: 2 },
-];
-
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'EMP-101', fullName: 'สมชาย ใจดี', department: 'เตรียมไม้' },
-  { id: 'EMP-102', fullName: 'วิชัย รักงาน', department: 'แปรรูปไม้สด' },
-  { id: 'EMP-103', fullName: 'ดวงใจ ขยันยิ่ง', department: 'สำนักงาน' },
-  { id: 'EMP-104', fullName: 'สมศักดิ์ กล้าหาญ', department: 'คลังสินค้า' },
-];
-
-const MOCK_RECORDS: TrainingRecord[] = [
-  { id: 'TR-1001', empId: 'EMP-101', courseId: 'SFT-001', date: '2026-05-20', trainer: 'คุณวนัสรา', score: 85 },
-  { id: 'TR-1002', empId: 'EMP-102', courseId: 'SKL-001', date: '2026-05-22', trainer: 'คุณสมภพ', score: 65 }, // Fail
-  { id: 'TR-1003', empId: 'EMP-104', courseId: 'ORI-001', date: '2026-05-24', trainer: 'HR Team', score: 100 },
-];
+import { useData, saveTrainingRecord, deleteTrainingRecord, type Course, type TrainingRecord } from '@/lib/useData';
 
 export default function TrainingPage() {
   const { t, lang, td } = useTranslation();
-  const [records, setRecords] = useState<TrainingRecord[]>(MOCK_RECORDS);
+  const { courses, employees, records, loading, error, refetch } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [saving, setSaving] = useState(false);
+
   // Form State
   const [editingRecord, setEditingRecord] = useState<TrainingRecord | null>(null);
   const [formData, setFormData] = useState<Partial<TrainingRecord>>({
@@ -56,8 +27,8 @@ export default function TrainingPage() {
 
   const openAddModal = () => {
     setEditingRecord(null);
-    setFormData({ 
-      empId: '', courseId: '', date: new Date().toISOString().split('T')[0], trainer: '', score: 0 
+    setFormData({
+      empId: '', courseId: '', date: new Date().toISOString().split('T')[0], trainer: '', score: 0
     });
     setIsModalOpen(true);
   };
@@ -68,36 +39,48 @@ export default function TrainingPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm(t('training.confirmDel'))) {
-      setRecords(records.filter(r => r.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm(t('training.confirmDel'))) return;
+    const { error: delErr } = await deleteTrainingRecord(id);
+    if (delErr) {
+      alert(`ลบไม่สำเร็จ: ${delErr.message}`);
+      return;
     }
+    await refetch();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.empId || !formData.courseId || !formData.date || !formData.trainer) {
       alert(t('training.scoreMissing'));
       return;
     }
-    
     if (formData.score !== undefined && (formData.score < 0 || formData.score > 100)) {
       alert(t('training.scoreRange'));
       return;
     }
-
-    if (editingRecord) {
-      setRecords(records.map(r => r.id === editingRecord.id ? { ...formData } as TrainingRecord : r));
-    } else {
-      const newId = `TR-${Date.now()}`;
-      setRecords([...records, { ...formData, id: newId } as TrainingRecord]);
+    setSaving(true);
+    const rec = {
+      id: editingRecord?.id,
+      empId: formData.empId!,
+      courseId: formData.courseId!,
+      date: formData.date!,
+      trainer: formData.trainer!,
+      score: Number(formData.score) || 0,
+    };
+    const { error: saveErr } = await saveTrainingRecord(rec, !!editingRecord);
+    setSaving(false);
+    if (saveErr) {
+      alert(`บันทึกไม่สำเร็จ: ${saveErr.message}`);
+      return;
     }
     setIsModalOpen(false);
+    await refetch();
   };
 
   // Helper Functions
-  const getEmpDetails = (empId: string) => MOCK_EMPLOYEES.find(e => e.id === empId);
-  const getCourseDetails = (courseId: string) => MOCK_COURSES.find(c => c.id === courseId);
-  
+  const getEmpDetails = (empId: string) => employees.find(e => e.id === empId);
+  const getCourseDetails = (courseId: string) => courses.find(c => c.id === courseId);
+
   const formatDateThai = (dateStr: string) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -108,7 +91,7 @@ export default function TrainingPage() {
   const calculateExpiryDate = (recordDateStr: string, course?: Course) => {
     if (!course) return "-";
     if (course.expiry_years === 0) return t('courses.noExpiry');
-    
+
     const date = new Date(recordDateStr);
     date.setFullYear(date.getFullYear() + course.expiry_years);
     return formatDateThai(date.toISOString());
@@ -131,6 +114,25 @@ export default function TrainingPage() {
     );
   });
 
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64 text-slate-400 gap-2">
+        <Loader2 className="animate-spin" size={20} /> กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl">
+          เกิดข้อผิดพลาด: {error}
+          <button onClick={refetch} className="ml-3 underline">ลองใหม่</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-8">
@@ -140,7 +142,7 @@ export default function TrainingPage() {
         </div>
         <button 
           onClick={openAddModal}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/30"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-500/30"
         >
           <Plus size={20} />
           {t('training.addBtn')}
@@ -154,7 +156,7 @@ export default function TrainingPage() {
             <input 
               type="text" 
               placeholder={t('training.searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -202,7 +204,7 @@ export default function TrainingPage() {
                       <div className="flex flex-col items-center gap-1.5">
                         <span className="font-bold text-slate-700 text-sm">{record.score} / 100</span>
                         {isPass ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                             <CheckCircle size={12} /> {t('common.pass')}
                           </span>
                         ) : (
@@ -214,7 +216,7 @@ export default function TrainingPage() {
                     </td>
                     <td className="px-6 py-4 text-center">
                        {course?.expiry_years === 0 ? (
-                         <span className="text-emerald-600 text-xs font-medium bg-emerald-50 px-2 py-1 rounded">{t('courses.noExpiry')}</span>
+                         <span className="text-blue-600 text-xs font-medium bg-blue-50 px-2 py-1 rounded">{t('courses.noExpiry')}</span>
                        ) : (
                          <div className="text-sm text-slate-600">{expiryText}</div>
                        )}
@@ -271,12 +273,12 @@ export default function TrainingPage() {
                  <div className="col-span-2">
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('training.formEmp')}</label>
                    <select 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-white"
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white"
                      value={formData.empId}
                      onChange={e => setFormData({...formData, empId: e.target.value})}
                    >
                      <option value="" disabled>{t('training.selectEmp')}</option>
-                     {MOCK_EMPLOYEES.map(emp => (
+                     {employees.map(emp => (
                        <option key={emp.id} value={emp.id}>[{emp.id}] {td(emp.fullName)} ({td(emp.department)})</option>
                      ))}
                    </select>
@@ -284,12 +286,12 @@ export default function TrainingPage() {
                  <div className="col-span-2">
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('training.formCourse')}</label>
                    <select 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-white"
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white"
                      value={formData.courseId}
                      onChange={e => setFormData({...formData, courseId: e.target.value})}
                    >
                      <option value="" disabled>{t('training.selectCourse')}</option>
-                     {MOCK_COURSES.map(course => (
+                     {courses.map(course => (
                        <option key={course.id} value={course.id}>[{course.id}] {td(course.title)}</option>
                      ))}
                    </select>
@@ -298,7 +300,7 @@ export default function TrainingPage() {
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('training.formDate')}</label>
                    <input 
                      type="date" 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none font-medium text-slate-700" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium text-slate-700" 
                      value={formData.date}
                      onChange={e => setFormData({...formData, date: e.target.value})}
                    />
@@ -309,7 +311,7 @@ export default function TrainingPage() {
                      type="number" 
                      min="0"
                      max="100"
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                      value={formData.score === undefined ? '' : formData.score}
                      onChange={e => setFormData({...formData, score: Number(e.target.value)})}
                    />
@@ -318,7 +320,7 @@ export default function TrainingPage() {
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('training.formTrainer')}</label>
                    <input 
                      type="text" 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                      value={formData.trainer}
                      onChange={e => setFormData({...formData, trainer: e.target.value})}
                    />
@@ -332,10 +334,12 @@ export default function TrainingPage() {
               >
                 {t('common.cancel')}
               </button>
-              <button 
+              <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors shadow-md shadow-emerald-500/20"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-md shadow-blue-500/20 flex items-center gap-2"
               >
+                {saving && <Loader2 size={16} className="animate-spin" />}
                 {t('common.save')}
               </button>
             </div>

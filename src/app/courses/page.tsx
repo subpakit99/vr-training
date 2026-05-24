@@ -1,32 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, BookOpen, Clock, AlertCircle } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, BookOpen, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { useTranslation } from '@/lib/LanguageContext';
-
-type CourseCategory = 'ความปลอดภัย' | 'ทักษะงาน' | 'ปฐมนิเทศ';
-
-interface Course {
-  id: string;
-  title: string;
-  category: CourseCategory;
-  is_compulsory: boolean;
-  hours: number;
-  expiry_years: number; // 0 = no expiry
-}
-
-const MOCK_COURSES: Course[] = [
-  { id: 'SFT-001', title: 'ความปลอดภัยในการทำงานกับเครื่องจักร', category: 'ความปลอดภัย', is_compulsory: true, hours: 6, expiry_years: 1 },
-  { id: 'ORI-001', title: 'ปฐมนิเทศพนักงานใหม่', category: 'ปฐมนิเทศ', is_compulsory: true, hours: 3, expiry_years: 0 },
-  { id: 'SKL-001', title: 'เทคนิคการแปรรูปไม้ยางพารา', category: 'ทักษะงาน', is_compulsory: false, hours: 12, expiry_years: 2 },
-];
+import { useData, saveCourse, deleteCourse, type Course, type CourseCategory } from '@/lib/useData';
 
 export default function CoursesPage() {
   const { t, td } = useTranslation();
-  const [courses, setCourses] = useState<Course[]>(MOCK_COURSES);
+  const { courses, loading, error, refetch } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState<Partial<Course>>({
     id: '', title: '', category: 'ความปลอดภัย', is_compulsory: false, hours: 0, expiry_years: 0
   });
@@ -51,28 +36,61 @@ export default function CoursesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm(t('training.confirmDel'))) {
-      setCourses(courses.filter(c => c.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm(t('training.confirmDel'))) return;
+    const { error: delErr } = await deleteCourse(id);
+    if (delErr) {
+      alert(`ลบไม่สำเร็จ: ${delErr.message}`);
+      return;
     }
+    await refetch();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.id || !formData.title) {
       alert(t('training.scoreMissing'));
       return;
     }
-
-    if (editingCourse) {
-      setCourses(courses.map(c => c.id === editingCourse.id ? { ...formData } as Course : c));
-    } else {
-      setCourses([...courses, { ...formData } as Course]);
+    setSaving(true);
+    const course: Course = {
+      id: formData.id!,
+      title: formData.title!,
+      category: (formData.category || 'ความปลอดภัย') as CourseCategory,
+      is_compulsory: !!formData.is_compulsory,
+      hours: Number(formData.hours) || 0,
+      expiry_years: Number(formData.expiry_years) || 0,
+    };
+    const { error: saveErr } = await saveCourse(course, !!editingCourse);
+    setSaving(false);
+    if (saveErr) {
+      alert(`บันทึกไม่สำเร็จ: ${saveErr.message}`);
+      return;
     }
     setIsModalOpen(false);
+    await refetch();
   };
 
   const compulsoryCount = courses.filter(c => c.is_compulsory).length;
   const avgHours = courses.length ? Math.round(courses.reduce((acc, curr) => acc + curr.hours, 0) / courses.length) : 0;
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64 text-slate-400 gap-2">
+        <Loader2 className="animate-spin" size={20} /> กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl">
+          เกิดข้อผิดพลาด: {error}
+          <button onClick={refetch} className="ml-3 underline">ลองใหม่</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 animate-in fade-in duration-500">
@@ -83,7 +101,7 @@ export default function CoursesPage() {
         </div>
         <button 
           onClick={openAddModal}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/30"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-500/30"
         >
           <Plus size={20} />
           {t('courses.addBtn')}
@@ -128,7 +146,7 @@ export default function CoursesPage() {
             <input 
               type="text" 
               placeholder={t('courses.searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -160,7 +178,7 @@ export default function CoursesPage() {
                   </td>
                   <td className="px-6 py-4 text-center text-slate-600">{course.hours} {t('courses.hours')}</td>
                   <td className="px-6 py-4 text-center text-slate-600">
-                    {course.expiry_years === 0 ? <span className="text-emerald-500 font-medium text-xs bg-emerald-50 px-2 py-1 rounded">{t('courses.noExpiry')}</span> : `${course.expiry_years} ${t('courses.years')}`}
+                    {course.expiry_years === 0 ? <span className="text-blue-500 font-medium text-xs bg-blue-50 px-2 py-1 rounded">{t('courses.noExpiry')}</span> : `${course.expiry_years} ${t('courses.years')}`}
                   </td>
                   <td className="px-6 py-4 text-center">
                     {course.is_compulsory ? (
@@ -215,7 +233,7 @@ export default function CoursesPage() {
                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('courses.formId')}</label>
                  <input 
                    type="text" 
-                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                    value={formData.id}
                    onChange={e => setFormData({...formData, id: e.target.value})}
                    disabled={!!editingCourse}
@@ -225,7 +243,7 @@ export default function CoursesPage() {
                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('courses.formTitle')}</label>
                  <input 
                    type="text" 
-                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                    value={formData.title}
                    onChange={e => setFormData({...formData, title: e.target.value})}
                  />
@@ -234,7 +252,7 @@ export default function CoursesPage() {
                  <div>
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('courses.formCategory')}</label>
                    <select 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none bg-white"
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white"
                      value={formData.category}
                      onChange={e => setFormData({...formData, category: e.target.value as CourseCategory})}
                    >
@@ -247,7 +265,7 @@ export default function CoursesPage() {
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('courses.formHours')}</label>
                    <input 
                      type="number" 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                      value={formData.hours}
                      onChange={e => setFormData({...formData, hours: Number(e.target.value)})}
                    />
@@ -256,7 +274,7 @@ export default function CoursesPage() {
                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('courses.formExpiry')} (0 = {t('courses.noExpiry')})</label>
                    <input 
                      type="number" 
-                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" 
+                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none" 
                      value={formData.expiry_years}
                      onChange={e => setFormData({...formData, expiry_years: Number(e.target.value)})}
                    />
@@ -265,7 +283,7 @@ export default function CoursesPage() {
                    <label className="flex items-center gap-2 cursor-pointer">
                      <input 
                        type="checkbox" 
-                       className="w-4 h-4 text-emerald-500 focus:ring-emerald-500/20 border-slate-300 rounded"
+                       className="w-4 h-4 text-blue-500 focus:ring-blue-500/20 border-slate-300 rounded"
                        checked={formData.is_compulsory}
                        onChange={e => setFormData({...formData, is_compulsory: e.target.checked})}
                      />
@@ -281,10 +299,12 @@ export default function CoursesPage() {
               >
                 {t('common.cancel')}
               </button>
-              <button 
+              <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors shadow-md shadow-emerald-500/20"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-md shadow-blue-500/20 flex items-center gap-2"
               >
+                {saving && <Loader2 size={16} className="animate-spin" />}
                 {t('common.save')}
               </button>
             </div>

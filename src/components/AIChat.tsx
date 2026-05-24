@@ -1,33 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, X, Send, User, Loader2, Headset, MessageSquareHeart } from "lucide-react";
-
-// MOCK DATA (Temporary for context until DB is connected)
-const MOCK_COURSES = [
-  { id: 'SFT-001', title: 'ความปลอดภัยเครื่องจักร', expiry_years: 1, hours: 6, category: 'ความปลอดภัย', is_compulsory: true },
-  { id: 'ORI-001', title: 'ปฐมนิเทศพนักงานใหม่', expiry_years: 0, hours: 3, category: 'ปฐมนิเทศ', is_compulsory: true },
-  { id: 'SKL-001', title: 'การแปรรูปไม้ยางพารา', expiry_years: 2, hours: 12, category: 'ทักษะงาน', is_compulsory: false },
-  { id: 'SKL-002', title: 'การขับโฟล์คลิฟต์', expiry_years: 2, hours: 8, category: 'ทักษะงาน', is_compulsory: false },
-];
-const MOCK_EMPLOYEES = [
-  { id: 'EMP-101', fullName: 'สมชาย ใจดี', department: 'เตรียมไม้', position: 'พนักงานผลิต' },
-  { id: 'EMP-102', fullName: 'วิชัย รักงาน', department: 'แปรรูปไม้สด', position: 'หัวหน้ากะ' },
-  { id: 'EMP-103', fullName: 'ดวงใจ ขยันยิ่ง', department: 'สำนักงาน', position: 'เจ้าหน้าที่บุคคล' },
-  { id: 'EMP-104', fullName: 'สมศักดิ์ กล้าหาญ', department: 'คลังสินค้า', position: 'พนักงานขับโฟล์คลิฟต์' },
-  { id: 'EMP-105', fullName: 'มานี สีใส', department: 'แปรรูปไม้สด', position: 'พนักงานผลิต' },
-];
-const MOCK_RECORDS = [
-  { id: 'TR-1001', empId: 'EMP-101', courseId: 'SFT-001', date: '2026-05-20', trainer: 'คุณวนัสรา', score: 85 },
-  { id: 'TR-1002', empId: 'EMP-101', courseId: 'SKL-001', date: '2026-05-22', trainer: 'คุณสมภพ', score: 65 },
-  { id: 'TR-1003', empId: 'EMP-104', courseId: 'ORI-001', date: '2026-05-24', trainer: 'HR', score: 100 },
-  { id: 'TR-1004', empId: 'EMP-101', courseId: 'ORI-001', date: '2026-01-10', trainer: 'HR', score: 80 },
-  { id: 'TR-1005', empId: 'EMP-102', courseId: 'SFT-001', date: '2025-05-01', trainer: 'วิทยากร', score: 95 },
-  { id: 'TR-1006', empId: 'EMP-103', courseId: 'SFT-001', date: '2025-06-15', trainer: 'วิทยากร', score: 90 },
-  { id: 'TR-1007', empId: 'EMP-102', courseId: 'ORI-001', date: '2026-05-01', trainer: 'HR', score: 88 },
-  { id: 'TR-1008', empId: 'EMP-103', courseId: 'ORI-001', date: '2026-05-01', trainer: 'HR', score: 88 },
-  { id: 'TR-1009', empId: 'EMP-104', courseId: 'SFT-001', date: '2026-05-01', trainer: 'วิทยากร', score: 88 },
-  { id: 'TR-1010', empId: 'EMP-104', courseId: 'SKL-002', date: '2026-05-05', trainer: 'คุณสมภพ', score: 92 },
-];
+import { Sparkles, X, Send, Loader2, Headset, MessageSquareHeart } from "lucide-react";
 
 interface Message {
   id: string;
@@ -69,15 +42,7 @@ export default function AIChat() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: text,
-          context: {
-            courses: MOCK_COURSES,
-            employees: MOCK_EMPLOYEES,
-            records: MOCK_RECORDS,
-            today: new Date().toISOString()
-          }
-        })
+        body: JSON.stringify({ question: text })
       });
 
       const data = await res.json();
@@ -100,12 +65,12 @@ export default function AIChat() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 hover:shadow-[0_0_25px_rgb(16,185,129,0.5)] hover:scale-110 flex items-center justify-center bg-emerald-500 text-white group ${isOpen ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 hover:shadow-[0_0_25px_rgb(16,185,129,0.5)] hover:scale-110 flex items-center justify-center bg-blue-500 text-white group ${isOpen ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}
       >
         <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
         <span className="absolute 0 top-0 right-0 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-300 border-2 border-emerald-500"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-200 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-300 border-2 border-blue-500"></span>
         </span>
       </button>
 
@@ -125,15 +90,15 @@ export default function AIChat() {
         <div className="p-5 flex items-center justify-between border-b border-border-color shrink-0 bg-bg-card md:rounded-t-3xl">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
                 <Headset size={24} />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-bg-card rounded-full"></div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 border-2 border-bg-card rounded-full"></div>
             </div>
             <div>
               <h2 className="font-bold text-text-primary text-lg leading-tight">น้องวีอาร์ (VR Support)</h2>
-              <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <p className="text-blue-500 text-xs font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                 พร้อมให้บริการค่ะ
               </p>
             </div>
@@ -150,7 +115,7 @@ export default function AIChat() {
         <div className="flex-1 overflow-y-auto p-5 bg-bg-primary flex flex-col gap-5">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-700">
-              <div className="w-20 h-20 bg-white shadow-sm text-emerald-500 rounded-[2rem] flex items-center justify-center mb-5 rotate-3 border border-border-color/50">
+              <div className="w-20 h-20 bg-white shadow-sm text-blue-500 rounded-[2rem] flex items-center justify-center mb-5 rotate-3 border border-border-color/50">
                 <MessageSquareHeart size={36} className="animate-pulse" />
               </div>
               <h3 className="font-bold text-text-primary text-lg mb-2">สวัสดีค่ะ! มีอะไรให้วีอาร์ช่วยไหมคะ? ✨</h3>
@@ -163,7 +128,7 @@ export default function AIChat() {
                   <button
                     key={idx}
                     onClick={() => handleSend(s)}
-                    className="text-left text-sm bg-bg-card border border-border-color hover:border-emerald-500 hover:shadow-md hover:text-emerald-600 hover:-translate-y-0.5 px-4 py-3.5 rounded-2xl transition-all duration-200"
+                    className="text-left text-sm bg-bg-card border border-border-color hover:border-blue-500 hover:shadow-md hover:text-blue-600 hover:-translate-y-0.5 px-4 py-3.5 rounded-2xl transition-all duration-200"
                   >
                     {s}
                   </button>
@@ -175,13 +140,13 @@ export default function AIChat() {
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 mt-1 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0 mt-1 shadow-sm">
                       <Headset size={16} />
                     </div>
                   )}
                   <div className={`p-3.5 text-[15px] leading-relaxed shadow-sm ${
                     msg.role === 'user' 
-                    ? 'bg-emerald-600 text-white rounded-2xl rounded-tr-sm' 
+                    ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
                     : 'bg-bg-card border border-border-color text-text-primary rounded-2xl rounded-tl-sm whitespace-pre-wrap'
                   }`}>
                     {msg.content}
@@ -190,13 +155,13 @@ export default function AIChat() {
               ))}
               {isLoading && (
                 <div className="flex gap-3 max-w-[85%] animate-in fade-in">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-sm">
                     <Headset size={16} />
                   </div>
                   <div className="p-4 bg-bg-card border border-border-color rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-[50px]">
-                     <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                     <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                     <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></div>
+                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
                   </div>
                 </div>
               )}
@@ -215,14 +180,14 @@ export default function AIChat() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
                 placeholder="พิมพ์ข้อความคุยกับวีอาร์..."
-                className="w-full pl-4 pr-10 py-3 bg-bg-primary border border-border-color rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-[15px] text-text-primary placeholder:text-text-secondary/60 transition-all"
+                className="w-full pl-4 pr-10 py-3 bg-bg-primary border border-border-color rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-[15px] text-text-primary placeholder:text-text-secondary/60 transition-all"
                 disabled={isLoading}
               />
             </div>
             <button
               onClick={() => handleSend(input)}
               disabled={isLoading || !input.trim()}
-              className="p-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-95 shrink-0"
+              className="p-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-95 shrink-0"
             >
               {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-0.5" />}
             </button>

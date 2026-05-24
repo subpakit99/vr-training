@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import AIChat from "@/components/AIChat";
+import Header from "@/components/Header";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
 
@@ -24,9 +25,12 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <Sidebar />
-            <main className="flex-1 max-h-screen overflow-y-auto w-full pt-16 md:pt-0">
-              {children}
-            </main>
+            <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
+              <Header />
+              <main className="flex-1 overflow-y-auto w-full">
+                {children}
+              </main>
+            </div>
             <AIChat />
           </LanguageProvider>
         </ThemeProvider>
