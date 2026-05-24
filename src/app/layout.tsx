@@ -6,7 +6,7 @@ import AIChat from "@/components/AIChat";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
 
-const inter = Inter({ subsets: ["latin", "thai"] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "VR Container Training",
